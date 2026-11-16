@@ -327,9 +327,7 @@ def make_handler(state, favourites, settings, web_root):
                     return self._send(421, "Misdirected request", "text/plain")
                 # The upstream page uses plain GETs for state changes, so block what browsers
                 # label as cross-site instead (CSRF from other websites), except upstream's own page.
-                if raw_path.startswith(STATE_CHANGING) and \
-                        self.headers.get("Sec-Fetch-Site", "").lower() == "cross-site" and \
-                        self.headers.get("Origin") != TRUSTED_ORIGIN:
+                if raw_path.startswith(STATE_CHANGING) and not self._write_allowed():
                     return self._send(403, '{"Success": false}')
                 if raw_path == "/api/":
                     return self._send(200, json.dumps(state.api_json()))
@@ -350,6 +348,20 @@ def make_handler(state, favourites, settings, web_root):
                 return self._static(urllib.parse.unquote(raw_path))
             except (BrokenPipeError, ConnectionResetError):
                 pass
+
+        def _write_allowed(self):
+            """Fail-closed CSRF check for state-changing GETs (the upstream page can't send tokens)."""
+            sfs = (self.headers.get("Sec-Fetch-Site") or "").lower()
+            if sfs in ("same-origin", "none"):
+                return True
+            source = self.headers.get("Origin") or self.headers.get("Referer") or ""
+            if source:
+                p = urllib.parse.urlsplit(source)
+                origin = f"{p.scheme}://{p.netloc}".lower()
+                own = f"http://{(self.headers.get('Host') or '').lower()}"
+                return origin in (own, TRUSTED_ORIGIN)
+            # No browser headers at all: a non-browser client (ctl CLI, curl, apps).
+            return not sfs
 
         # -- endpoints -------------------------------------------------------
 
