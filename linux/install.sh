@@ -25,12 +25,21 @@ done
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# Make app menus / launcher search pick up the entry now instead of after the next login.
+refresh_menus() {
+  have update-desktop-database && update-desktop-database -q "$APP_DIR" 2>/dev/null || true
+  for k in kbuildsycoca6 kbuildsycoca5; do
+    if have "$k"; then "$k" >/dev/null 2>&1 || true; break; fi
+  done
+}
+
 if [[ $uninstall == 1 ]]; then
   if have systemctl; then systemctl --user disable --now "$NAME.service" 2>/dev/null || true; fi
   python3 "$SERVER" install-plugin --uninstall || true
   rm -f "$UNIT_DIR/$NAME.service" "$APP_DIR/$NAME.desktop"
   [[ -L "$BIN_DIR/$NAME" ]] && rm -f "$BIN_DIR/$NAME"
   have systemctl && systemctl --user daemon-reload || true
+  refresh_menus
   echo "Uninstalled. Settings and favourites are still in ~/.config/$NAME/"
   exit 0
 fi
@@ -68,7 +77,12 @@ fi
 # 4. Desktop entry.
 mkdir -p "$APP_DIR"
 sed "s|@SERVER@|$SERVER|" "$HERE/packaging/$NAME.desktop" > "$APP_DIR/$NAME.desktop"
-echo "==> desktop entry: $APP_DIR/$NAME.desktop"
+refresh_menus
+echo "==> app menu entry: \"ETS2 Local Radio\" ($APP_DIR/$NAME.desktop)"
+if ! python3 -c "import PySide6" 2>/dev/null && ! python3 -c "import PyQt6" 2>/dev/null; then
+  echo "    note: install PySide6 for the server window (Arch: pyside6, Debian/Ubuntu: python3-pyside6.qtwidgets,"
+  echo "          Fedora: python3-pyside6). Without it the menu entry opens the website instead."
+fi
 
 # 5. Game plugin.
 echo "==> installing the plugin into ETS2/ATS"
@@ -76,6 +90,6 @@ python3 "$SERVER" install-plugin || echo "    (re-run later with: $NAME install-
 
 cat <<EOF
 
-Done. Start it from your app menu ("ETS2 Local Radio") or run:  $NAME --open
+Done. Start it from your app menu ("ETS2 Local Radio") or run:  $NAME gui
 Settings: ~/.config/$NAME/settings.json  (restart the server after editing)
 EOF

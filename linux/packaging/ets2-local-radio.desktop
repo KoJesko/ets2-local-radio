@@ -6,5 +6,5 @@ Comment=Play real local radio for where you are in Euro Truck Simulator 2 / Amer
 Exec=/usr/bin/env python3 @SERVER@ gui
 Icon=audio-radio
 Terminal=false
-Categories=Game;Audio;
+Categories=Game;Simulation;
 Keywords=ets2;ats;truck;radio;
