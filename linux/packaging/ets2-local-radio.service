@@ -1,0 +1,12 @@
+[Unit]
+Description=ETS2/ATS Local Radio server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 @SERVER@ serve
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

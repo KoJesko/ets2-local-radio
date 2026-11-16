@@ -1,4 +1,7 @@
 ![Logo](https://i.imgur.com/1CToXfs.png)  
+
+> **🐧 Linux:** this fork adds a native Linux version for the native game and for ETS2/ATS under Proton or TruckersMP. See **[linux/README.md](linux/README.md)**. Quick start: `git clone --depth 1 -b linux https://github.com/KoJesko/ets2-local-radio.git && ./ets2-local-radio/linux/install.sh`
+
 ETS2/ATS Local Radio plays radio from where you are, in ETS2. Feel the immersion when the Swedish radio plays in Sweden, and the Polish radio in Poland. It will switch automatically, while also allowing you to switch stations while driving. You can switch using the web interface, your keyboard, your controller and your mobile phone.
 
 ATS/ETS2 Local Radio contains over 9000 radio stations that you could realistically listen to if you were driving in that actual area. Most national radio stations are included for ETS2; see the full list at the bottom of this page. It does not include radio stations that you would not be able to receive over FM or DAB in that country, like TruckersFM. However, you can add those yourself if you so desire.

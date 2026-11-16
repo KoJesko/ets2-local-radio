@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ETS2 Local Radio
+GenericName=Truck Simulator Radio
+Comment=Play real local radio for where you are in Euro Truck Simulator 2 / American Truck Simulator
+Exec=/usr/bin/env python3 @SERVER@ open
+Icon=audio-radio
+Terminal=false
+Categories=Game;Audio;
+Keywords=ets2;ats;truck;radio;
