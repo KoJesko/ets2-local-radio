@@ -61,6 +61,8 @@ ets2-local-radio install-plugin [--game ets2|ats] [--path DIR] [--uninstall]
 
 By default the server listens on all interfaces (`"host": "0.0.0.0"`), and on start it prints the LAN address to open on your phone. Remote control by PeerID works the same as on Windows. To keep the server on this PC only, set `"host": "127.0.0.1"`.
 
+Like the Windows version, the server has no login: anyone on your LAN can open the page and change stations or favourites. Requests aimed at it from other websites (cross-site requests, DNS rebinding) are rejected.
+
 ## Settings
 
 `~/.config/ets2-local-radio/settings.json` is created on first start. Restart the server after editing it (`systemctl --user restart ets2-local-radio`, if you use the service).

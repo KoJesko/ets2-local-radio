@@ -231,15 +231,25 @@ def udp_listener(state, sock):
         data, _ = sock.recvfrom(2048)
         try:
             pkt = json.loads(data.decode("utf-8"))
-        except ValueError:
-            continue
-        if not announced and pkt.get("game") in GAMES:
-            log(f"telemetry: receiving from {pkt.get('game')}")
-            announced = True
-        elif pkt.get("game") not in GAMES:
-            announced = False
-            log("telemetry: game closed")
-        state.telemetry(pkt)
+            if not isinstance(pkt, dict):
+                continue
+            for k in ("x", "y", "z"):
+                v = float(pkt.get(k) or 0)
+                if v != v or v in (float("inf"), float("-inf")):  # NaN / inf
+                    raise ValueError(k)
+            int(pkt.get("seq") or 0)
+        except (ValueError, TypeError, UnicodeDecodeError, OverflowError):
+            continue  # malformed datagram: drop it, never let it kill this thread
+        try:
+            if not announced and pkt.get("game") in GAMES:
+                log(f"telemetry: receiving from {pkt.get('game')}")
+                announced = True
+            elif pkt.get("game") not in GAMES and announced:
+                announced = False
+                log("telemetry: game closed")
+            state.telemetry(pkt)
+        except Exception as e:  # keep listening whatever happens
+            log(f"telemetry: bad datagram ignored: {e!r}")
 
 
 # --------------------------------------------------------------------------- HTTP
@@ -253,6 +263,25 @@ ACTIONS = {  # /control/<name> and `ets2-local-radio ctl <name>`
     "favourite": ("favourite", "0"),
     "go-to-favourite": ("goToFavourite", "0"),
 }
+
+
+TRUSTED_ORIGIN = "http://localradio.koenvh.nl"  # upstream's hosted page may drive a local server via ?api=
+STATE_CHANGING = ("/favourite/", "/control/", "/station/")
+
+
+def host_allowed(host_header):
+    """DNS-rebinding guard: only accept requests addressed to an IP or a local name."""
+    if not host_header:
+        return True  # HTTP/1.0 clients; browsers always send Host
+    host = host_header.strip().lower()
+    host = host[1:host.index("]")] if host.startswith("[") and "]" in host else host.rsplit(":", 1)[0]
+    if host in ("localhost", socket.gethostname().lower()) or host.endswith((".local", ".localhost", ".lan", ".home.arpa")):
+        return True
+    try:
+        socket.inet_pton(socket.AF_INET6 if ":" in host else socket.AF_INET, host)
+        return True
+    except OSError:
+        return False
 
 
 def make_handler(state, favourites, settings, web_root):
@@ -294,6 +323,14 @@ def make_handler(state, favourites, settings, web_root):
             raw_path = self.path.split("?", 1)[0]
             query = self.path.split("?", 1)[1] if "?" in self.path else ""
             try:
+                if not host_allowed(self.headers.get("Host")):
+                    return self._send(421, "Misdirected request", "text/plain")
+                # The upstream page uses plain GETs for state changes, so block what browsers
+                # label as cross-site instead (CSRF from other websites), except upstream's own page.
+                if raw_path.startswith(STATE_CHANGING) and \
+                        self.headers.get("Sec-Fetch-Site", "").lower() == "cross-site" and \
+                        self.headers.get("Origin") != TRUSTED_ORIGIN:
+                    return self._send(403, '{"Success": false}')
                 if raw_path == "/api/":
                     return self._send(200, json.dumps(state.api_json()))
                 if raw_path == "/commands/":
@@ -342,6 +379,8 @@ def make_handler(state, favourites, settings, web_root):
             if "/" not in rest:
                 return self._send(200, json.dumps({"Name": favourites.get(rest) or ""}, ensure_ascii=False))
             country, name = rest.split("/", 1)
+            if not re.fullmatch(r"[\w\-]{1,64}", country) or len(name) > 200:
+                return self._send(400, '{"Success": false}')
             favourites.set(country, name)
             return self._send(200, '{"Success": true}')
 
