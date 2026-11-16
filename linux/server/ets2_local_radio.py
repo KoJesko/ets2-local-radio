@@ -808,6 +808,19 @@ def cmd_open(args):
     subprocess.Popen(["xdg-open", url.replace("127.0.0.1", "localhost")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def cmd_gui(args):
+    sys.path.insert(0, HERE)
+    try:
+        import ets2_local_radio_gui as gui
+    except ImportError as e:
+        msg = f"The window needs PySide6 or PyQt6 ({e}). Opening the radio page instead."
+        log(msg)
+        if shutil.which("notify-send"):
+            subprocess.Popen(["notify-send", "-a", "ETS2 Local Radio", msg], stderr=subprocess.DEVNULL)
+        return cmd_open(args)
+    sys.exit(gui.main())
+
+
 def cmd_status(args):
     try:
         with urllib.request.urlopen(_base_url() + "/api/", timeout=3) as r:
@@ -895,34 +908,51 @@ def plugin_binaries():
     return out
 
 
-def cmd_install_plugin(args):
+PLUGIN_TARGETS = (("dll", "win_x64"), ("so", "linux_x64"))
+
+
+def plugin_installed(folder):
+    return any(os.path.isfile(os.path.join(folder, "bin", sub, "plugins", f"{PLUGIN_NAME}.{ext}"))
+               for ext, sub in PLUGIN_TARGETS)
+
+
+def install_plugin(folder, uninstall=False):
+    """Copy (or remove) the plugin for one game folder. Returns the paths touched."""
     bins = plugin_binaries()
-    if not bins:
-        sys.exit("no plugin binaries: run `make -C linux/plugin` first")
-    targets = {}
+    if not bins and not uninstall:
+        raise FileNotFoundError("no plugin binaries: run `make -C linux/plugin` first")
+    if not os.path.isdir(os.path.join(folder, "bin")):
+        raise FileNotFoundError(f"not a game folder (no bin/ inside): {folder}")
+    touched = []
+    for ext, sub in PLUGIN_TARGETS:
+        dest_dir = os.path.join(folder, "bin", sub, "plugins")
+        dest = os.path.join(dest_dir, f"{PLUGIN_NAME}.{ext}")
+        if uninstall:
+            if os.path.exists(dest):
+                os.remove(dest)
+                touched.append(dest)
+            continue
+        if ext not in bins or not os.path.isdir(os.path.join(folder, "bin", sub)):
+            continue  # e.g. no linux_x64 binaries in this install
+        os.makedirs(dest_dir, exist_ok=True)
+        shutil.copy2(bins[ext], dest)
+        touched.append(dest)
+    return touched
+
+
+def cmd_install_plugin(args):
     if args.path:
-        targets[args.game if args.game != "all" else "game"] = os.path.realpath(args.path)
+        targets = {args.game: os.path.realpath(args.path)}
     else:
-        games = find_games()
-        targets = {g: p for g, p in games.items() if args.game in ("all", g)}
+        targets = {g: p for g, p in find_games().items() if args.game in ("all", g)}
     if not targets:
         sys.exit("no ETS2/ATS install found in your Steam libraries (use --path <game folder>)")
-    for game, folder in targets.items():
-        for ext, sub in (("dll", "win_x64"), ("so", "linux_x64")):
-            if ext not in bins:
-                continue
-            dest_dir = os.path.join(folder, "bin", sub, "plugins")
-            dest = os.path.join(dest_dir, f"{PLUGIN_NAME}.{ext}")
-            if args.uninstall:
-                if os.path.exists(dest):
-                    os.remove(dest)
-                    print(f"removed   {dest}")
-                continue
-            if not os.path.isdir(os.path.join(folder, "bin", sub)):
-                continue  # e.g. no linux_x64 binaries in this install
-            os.makedirs(dest_dir, exist_ok=True)
-            shutil.copy2(bins[ext], dest)
-            print(f"installed {dest}")
+    for folder in targets.values():
+        try:
+            for path in install_plugin(folder, args.uninstall):
+                print(f"{'removed' if args.uninstall else 'installed'} {path}")
+        except FileNotFoundError as e:
+            sys.exit(str(e))
     if not args.uninstall:
         print("Done. The game shows an 'Advanced SDK features' prompt on start; accept it.")
 
@@ -941,6 +971,9 @@ def main():
 
     p = sub.add_parser("open", help="start the server if needed and open the page")
     p.set_defaults(func=cmd_open)
+
+    p = sub.add_parser("gui", help="server window with status, key bindings and plugin install (needs PySide6 or PyQt6)")
+    p.set_defaults(func=cmd_gui)
 
     p = sub.add_parser("ctl", help="send a command (bind these to desktop shortcuts)")
     p.add_argument("action", choices=sorted(ACTIONS))

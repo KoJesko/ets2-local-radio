@@ -14,7 +14,7 @@ It uses the same web player, stations, cities and map coverage as the Windows ve
 | `ETS2 Local Radio server.exe` (WinForms, .NET) | `linux/server/ets2_local_radio.py`. Python 3 standard library only, nothing to `pip install` |
 | `local-radio.dll` shared-memory plugin (unreadable from Linux when the game runs under Proton) | `local-radio-linux.dll` / `.so`. Tiny plugin that sends position over loopback UDP |
 | Global keyboard hook + DirectInput controller | evdev: works on Wayland **and** X11, including wheel/controller buttons |
-| Settings window | `~/.config/ets2-local-radio/settings.json` + the `learn` command |
+| Server window | Same window in Qt (`ets2-local-radio gui`): status, plugin install, click-and-press key / wheel bindings, options, live log. Without Qt it falls back to opening the website |
 | In-game overlay (D3D hook) | Optional desktop notification (`"notify": true`) |
 
 ## Install
@@ -34,7 +34,8 @@ The installer:
 
 Then:
 
-1. Open **ETS2 Local Radio** from the app menu, or run `ets2-local-radio --open`. Your browser opens <http://localhost:8330/>.
+1. Open **ETS2 Local Radio** from the app menu. The server window opens and runs the server, the same as on Windows; closing it stops the server. Click **Open ETS2 Local Radio** to open the radio in your browser.
+   The window needs PySide6 or PyQt6 (`sudo pacman -S pyside6`, `sudo apt install python3-pyside6.qtwidgets`, `sudo dnf install python3-pyside6`). Without it, the menu entry just opens the website, and the server keeps running in the background.
 2. Start the game and accept the *"Advanced SDK features"* dialog.
 3. Drive. Click once on the page so the browser allows audio playback.
 
@@ -50,6 +51,7 @@ Uninstall with `./linux/install.sh --uninstall`. Your settings and favourites ar
 
 ```
 ets2-local-radio [serve] [--open] [--port N] [--host ADDR] [--no-input]   run the server
+ets2-local-radio gui                        server window (status, bindings, plugin install, log)
 ets2-local-radio open                       start the server if needed and open the page
 ets2-local-radio status                     what the server is receiving from the game
 ets2-local-radio ctl next|previous|stop|volume-up|volume-down|favourite|go-to-favourite
@@ -65,7 +67,9 @@ Like the Windows version, the server has no login: anyone on your LAN can open t
 
 ## Settings
 
-`~/.config/ets2-local-radio/settings.json` is created on first start. Restart the server after editing it (`systemctl --user restart ets2-local-radio`, if you use the service).
+Easiest: use the **Keyboard**, **Controller** and **Options** tabs in the server window and press **Save**, which also restarts the server.
+
+`~/.config/ets2-local-radio/settings.json` is created on first start. If you edit it by hand, restart the server afterwards (`systemctl --user restart ets2-local-radio`, if you use the service).
 
 ```json
 {
