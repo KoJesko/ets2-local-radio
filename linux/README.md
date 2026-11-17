@@ -98,8 +98,10 @@ Easiest: use the **Keyboard**, **Controller** and **Options** tabs in the server
 The [Linux build of CoachNowPlaying](https://github.com/KoJesko/CoachNowPlaying/tree/linux) (the plugin for the
 "CarPlay-Style Infotainment for Coaches" mod) shows Local Radio on the coach's screen. It asks this server which
 station plays (`/nowplaying/`) and finds the song from the station's stream title, or with Shazam (SongRec) when the
-station doesn't send one. The screen then alternates between the song and "Iceland's best Pop station". The screen's
+station doesn't send one. The screen then alternates between the song and "%COUNTRY%'s best %GENRE% station". The screen's
 next/previous buttons switch stations through `/control/`.
+
+There are some special Easter Eggs for certain stations, typically found in map mods, but some are in the base game areas.
 
 `GET /nowplaying/` returns `{"station", "logo", "signal", "since", "game"}` for the station the page last switched to.
 
