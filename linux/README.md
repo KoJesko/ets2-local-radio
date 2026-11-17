@@ -93,6 +93,16 @@ Easiest: use the **Keyboard**, **Controller** and **Options** tabs in the server
 - **`custom.js`**: put your custom stations and settings in `~/.config/ets2-local-radio/custom.js` instead of `web/custom.js`, so `git pull` never conflicts with them. See `web/custom.example.js`.
 - **`udpPort`**: if you change it, also set `LOCAL_RADIO_UDP_PORT=<port>` in the game's environment (Steam launch options: `LOCAL_RADIO_UDP_PORT=9000 %command%`).
 
+## In-game screen: CoachNowPlaying
+
+The [Linux build of CoachNowPlaying](https://github.com/KoJesko/CoachNowPlaying/tree/linux) (the plugin for the
+"CarPlay-Style Infotainment for Coaches" mod) shows Local Radio on the coach's screen. It asks this server which
+station plays (`/nowplaying/`) and finds the song from the station's stream title, or with Shazam (SongRec) when the
+station doesn't send one. The screen then alternates between the song and "Iceland's best Pop station". The screen's
+next/previous buttons switch stations through `/control/`.
+
+`GET /nowplaying/` returns `{"station", "logo", "signal", "since", "game"}` for the station the page last switched to.
+
 ## How it works
 
 ```

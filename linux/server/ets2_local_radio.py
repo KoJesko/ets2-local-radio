@@ -161,6 +161,8 @@ class State:
         # config for "none", so we only ever switch between real games.
         self.game = settings["lastGame"] if settings["lastGame"] in GAMES else "ets2"
         self.command = self._make_command("none", "0", "0")
+        # Current station as last reported by the page (/station/...); read by /nowplaying/ (e.g. CoachNowPlaying).
+        self.station = {"station": "", "logo": "", "signal": "", "since": 0}
 
     def _make_command(self, action, amount, cmd_id=None):
         return {
@@ -343,6 +345,10 @@ def make_handler(state, favourites, settings, web_root):
                         return self._send(404, json.dumps({"Success": False, "Actions": sorted(ACTIONS)}))
                     state.push_command(*ACTIONS[action])
                     return self._send(200, '{"Success": true}')
+                if raw_path == "/nowplaying/":
+                    with state.cond:
+                        info = dict(state.station, game=state.game)
+                    return self._send(200, json.dumps(info, ensure_ascii=False))
                 if raw_path.startswith("/eskago/"):
                     return self._eskago(raw_path[len("/eskago/"):])
                 return self._static(urllib.parse.unquote(raw_path))
@@ -399,6 +405,12 @@ def make_handler(state, favourites, settings, web_root):
         def _station(self, rest, query):
             # /station/<name>/<signal>?<logo>  - the Windows server drew its in-game overlay here.
             name = urllib.parse.unquote(rest.split("/", 1)[0])
+            parts = rest.split("/")
+            with state.cond:
+                if name and name != state.station["station"]:
+                    state.station["since"] = int(time.time())
+                state.station.update(station=name, signal=urllib.parse.unquote(parts[1]) if len(parts) > 1 else "",
+                                     logo=urllib.parse.unquote(query))
             if settings["notify"] and name and shutil.which("notify-send"):
                 prefix = "Now playing:"
                 try:
