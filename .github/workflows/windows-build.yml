@@ -1,0 +1,42 @@
+name: Windows build
+
+# Builds the Windows desktop server (ETS2 Local Radio server.exe) from this
+# branch so a patched exe can be dropped into the upstream release package.
+on:
+  push:
+    branches: ["windows"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build solution (Release|x86)
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
+          if (-not $msbuild) { throw "MSBuild not found" }
+          & $msbuild "server\ETS2 Local Radio desktop.sln" -restore -p:RestorePackagesConfig=true `
+            -p:Configuration=Release -p:Platform=x86 -m -nologo -v:minimal
+          if ($LASTEXITCODE -ne 0) { throw "MSBuild failed ($LASTEXITCODE)" }
+
+      - name: Collect output
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Recurse -Path "server\ETS2 Local Radio desktop\bin" -Filter "ETS2 Local Radio server.exe" | Select-Object -First 1
+          if (-not $exe) { throw "server exe not produced" }
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item "$($exe.DirectoryName)\*" out -Recurse
+          Get-FileHash out\*.exe, out\*.dll -Algorithm SHA256 | Format-Table -AutoSize | Out-String -Width 200 | Tee-Object out\SHA256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ets2-local-radio-server-windows
+          path: out/
+          if-no-files-found: error
