@@ -317,7 +317,7 @@ namespace ETS2_Local_Radio_server
                     context.Response.OutputStream.Flush();
                 }
             }
-            else if (File.Exists(filename))
+            else if (IsUnderRoot(filename) && File.Exists(filename))
             {
                 try
                 {
@@ -355,6 +355,22 @@ namespace ETS2_Local_Radio_server
             }
 
             context.Response.OutputStream.Close();
+        }
+
+        // Rejects paths that resolve outside the web root, e.g. "..%5c..%5c" or an
+        // absolute "C:%5c..." path, which Path.Combine would otherwise honour.
+        private bool IsUnderRoot(string path)
+        {
+            try
+            {
+                string root = Path.GetFullPath(_rootDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                string full = Path.GetFullPath(path);
+                return full.StartsWith(root, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private void Initialize(string path, int port)
