@@ -19,6 +19,12 @@ jobs:
       - name: Build solution (Release|x86)
         shell: pwsh
         run: |
+          # Capture.csproj copies EasyHook's service exes as content, but *.exe is git-ignored
+          # upstream. Only the server exe is shipped from this build (the release package keeps
+          # upstream's EasyHook binaries), so empty placeholders are enough to satisfy the copy.
+          foreach ($f in "EasyHook32Svc.exe", "EasyHook64Svc.exe") {
+            if (-not (Test-Path "server\Capture\$f")) { New-Item -ItemType File "server\Capture\$f" | Out-Null }
+          }
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
           if (-not $msbuild) { throw "MSBuild not found" }
@@ -32,8 +38,8 @@ jobs:
           $exe = Get-ChildItem -Recurse -Path "server\ETS2 Local Radio desktop\bin" -Filter "ETS2 Local Radio server.exe" | Select-Object -First 1
           if (-not $exe) { throw "server exe not produced" }
           New-Item -ItemType Directory -Force out | Out-Null
-          Copy-Item "$($exe.DirectoryName)\*" out -Recurse
-          Get-FileHash out\*.exe, out\*.dll -Algorithm SHA256 | Format-Table -AutoSize | Out-String -Width 200 | Tee-Object out\SHA256.txt
+          Copy-Item "$($exe.DirectoryName)\ETS2 Local Radio server.*" out
+          Get-FileHash out\* -Algorithm SHA256 | Format-Table -AutoSize | Out-String -Width 200 | Tee-Object out\SHA256.txt
 
       - uses: actions/upload-artifact@v4
         with:
