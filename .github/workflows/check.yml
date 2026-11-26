@@ -17,21 +17,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Check whether city files are valid
-        uses: ali-kamalizade/es-check-action@1.0.2
+        uses: ali-kamalizade/es-check-action@28292c9ba63169153c9dd9d8d717e090332df893 # 1.0.2
         with:
           directory: 'web/cities'
           ecmaVersion: 'es5'
           files: '*.js'
       - name: Check whether station files are valid
-        uses: ali-kamalizade/es-check-action@1.0.2
+        uses: ali-kamalizade/es-check-action@28292c9ba63169153c9dd9d8d717e090332df893 # 1.0.2
         with:
           directory: 'web/stations'
           ecmaVersion: 'es5'
           files: '*.js'
       - name: Check whether European station logos are present
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const fs = require("fs");
@@ -53,7 +53,7 @@ jobs:
             }
 
       - name: Check whether American station logos are present
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const fs = require("fs");
